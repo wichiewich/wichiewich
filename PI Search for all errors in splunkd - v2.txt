@@ -1,0 +1,31 @@
+<form>
+  <label>PI Search for all errors in splunkd - v2</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="field1" searchWhenChanged="true">
+      <label>Time</label>
+      <default>
+        <earliest>-15m</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <table>
+        <title>Search</title>
+        <search>
+          <query>index=_internal sourcetype="splunkd" log_level="ERROR"
+ | stats sparkline count dc(host) as hosts last(_raw) as last_raw_msg values(sourcetype) as sourcetype last(_time) as last_msg_time first(_time) as first_msg_time values(index) as index by punct
+ | eval delta=round((first_msg_time-last_msg_time),2)
+ | eval msg_per_sec=round((count/delta),2)
+ | convert ctime(last_msg_time) ctime(first_msg_time)
+ | table last_raw_msg count hosts sparkline msg_per_sec sourcetype index first_msg_time last_msg_time delta
+ | sort -count</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+        </search>
+        <option name="drilldown">row</option>
+      </table>
+    </panel>
+  </row>
+</form>

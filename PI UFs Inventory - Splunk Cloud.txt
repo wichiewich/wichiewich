@@ -1,0 +1,119 @@
+<form>
+  <label>PI UFs Inventory - Splunk Cloud</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="dropdown" token="token_env" searchWhenChanged="true">
+      <label>Env</label>
+      <default>*</default>
+      <choice value="*">-All-</choice>
+      <initialValue>*</initialValue>
+      <fieldForLabel>env</fieldForLabel>
+      <fieldForValue>env</fieldForValue>
+      <search>
+        <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ os=$token_os$ fwdType=$token_fwdType$ | dedup env</query>
+      </search>
+    </input>
+    <input type="dropdown" token="token_fwdType" searchWhenChanged="true">
+      <label>fwdType</label>
+      <default>uf</default>
+      <choice value="*">-All-</choice>
+      <initialValue>uf</initialValue>
+      <fieldForLabel>fwdType</fieldForLabel>
+      <fieldForValue>fwdType</fieldForValue>
+      <search>
+        <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ os=$token_os$ env=$token_env$ | dedup fwdType</query>
+      </search>
+    </input>
+    <input type="text" token="host_token" searchWhenChanged="true">
+      <label>Hostname</label>
+      <default>*</default>
+    </input>
+    <input type="text" token="token_ip" searchWhenChanged="true">
+      <label>SourceIP</label>
+      <default>*</default>
+    </input>
+    <input type="dropdown" token="token_version" searchWhenChanged="true">
+      <label>Version</label>
+      <default>*</default>
+      <choice value="*">-All-</choice>
+      <fieldForLabel>version</fieldForLabel>
+      <fieldForValue>version</fieldForValue>
+      <search>
+        <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ os=$token_os$ fwdType=$token_fwdType$ env=$token_env$ | dedup version</query>
+      </search>
+      <initialValue>*</initialValue>
+    </input>
+    <input type="dropdown" token="token_os" searchWhenChanged="true">
+      <label>OS</label>
+      <default>*</default>
+      <choice value="*">-All-</choice>
+      <initialValue>*</initialValue>
+      <fieldForLabel>os</fieldForLabel>
+      <fieldForValue>os</fieldForValue>
+      <search>
+        <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ fwdType=$token_fwdType$ env=$token_env$ | dedup os</query>
+      </search>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>UFs by OS</title>
+        <search>
+          <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ os=$token_os$ fwdType=$token_fwdType$ env=$token_env$ | dedup hostname | stats count by os</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">180</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>UFs by Spluk version installed</title>
+        <search>
+          <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ os=$token_os$ fwdType=$token_fwdType$ env=$token_env$ | dedup hostname | stats count by version</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">180</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Environment</title>
+        <search>
+          <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ os=$token_os$ fwdType=$token_fwdType$ env=$token_env$ | dedup hostname | stats count by env</query>
+        </search>
+        <option name="charting.chart">pie</option>
+        <option name="charting.drilldown">none</option>
+        <option name="height">180</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <search>
+          <query>| inputlookup SplunkCloud_Internal_Search_UF_Versions_OS.csv | append [| inputlookup mDEV_Internal_Search_UF_Versions_OS.csv | eval env="mDEV"] | append [| inputlookup mTEST_Internal_Search_UF_Versions_OS.csv | eval env="mTEST"] | search hostname=$host_token$ sourceIp=$token_ip$ version=$token_version$ os=$token_os$ fwdType=$token_fwdType$ env=$token_env$ | table env,hostname,sourceIp,fwdType,guid,version,build,os,arch,ssl | sort + hostname</query>
+        </search>
+        <option name="count">100</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="version">
+          <colorPalette type="sharedList"></colorPalette>
+          <scale type="sharedCategory"></scale>
+        </format>
+        <format type="color" field="os">
+          <colorPalette type="sharedList"></colorPalette>
+          <scale type="sharedCategory"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+</form>

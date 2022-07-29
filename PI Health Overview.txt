@@ -1,0 +1,631 @@
+<form>
+  <label>PI Health Overview</label>
+  <fieldset submitButton="false" autoRun="true">
+    <input type="time" token="field1">
+      <label>Time Period</label>
+      <default>
+        <earliest>-24h@h</earliest>
+        <latest>now</latest>
+      </default>
+    </input>
+  </fieldset>
+  <row>
+    <panel>
+      <chart>
+        <title>No. of Errors in splunkd.log</title>
+        <search>
+          <query>index=_* source="/app/splunk/var/log/splunk/splunkd.log" log_level=ERROR OR log_level=WARN | timechart  count by log_level useother=f</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Events Per Environment</title>
+        <search>
+          <query>| tstats count WHERE (index=prd* OR index=ppe*) BY _time index | replace ppe* with ppe, prd* with prd in index | timechart sum(count) as events by index</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>Data Ingestion Rate (GB) - last 30 days</title>
+        <search>
+          <query>index=_internal source=*license_usage.log* type="RolloverSummary" earliest=-30d@d
+            | eval _time=_time - 43200
+            | bin _time span=1d
+            | stats latest(b) AS b by slave, pool, _time
+            | timechart span=1d sum(b) AS volume fixedrange=false
+            | eval volume=round(volume/1024/1024/1024,5)
+            | eventstats avg(volume) as Average
+            | eval Average=round(Average,3) 
+            | rename volume AS "Total Volume"</query>
+          <earliest>-30d@d</earliest>
+          <latest>now</latest>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.overlayFields">Average</option>
+        <option name="charting.drilldown">all</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>PROD - AVG Events sent per Second by Heavy Forwarder</title>
+        <search>
+          <query>index="_internal" (host="splunkfwd01.vpc02.prd.tbaws.com" OR host="splunkfwd02.vpc02.prd.tbaws.com" OR host="splunkfwd03.vpc02.prd.tbaws.com") (series="splunkfwd01.vpc02.prd.tbaws.com" OR series="splunkfwd02.vpc02.prd.tbaws.com" OR series="splunkfwd03.vpc02.prd.tbaws.com" ) source="/app/splunk/var/log/splunk/metrics.log" group=per_host_thruput  | timechart minspan=10m avg(eps) by series</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <selection>
+          <set token="selection.earliest">$start$</set>
+          <set token="selection.latest">$end$</set>
+        </selection>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>PROD Events by Source - Top 30</title>
+        <search>
+          <query>| tstats count WHERE (index=prd* ) BY _time source | timechart sum(count) as events by source limit=30 useother=f</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisEnd</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>PPE - AVG Events sent per Second by Heavy Forwarder</title>
+        <search>
+          <query>index="_internal" (host="splunkfwd01.vpc02.ppe.tbaws.com" OR host="splunkfwd02.vpc02.ppe.tbaws.com" OR host="splunkfwd03.vpc02.ppe.tbaws.com") (series="splunkfwd01.vpc02.ppe.tbaws.com" OR series="splunkfwd02.vpc02.ppe.tbaws.com" OR series="splunkfwd03.vpc02.ppe.tbaws.com" ) source="/app/splunk/var/log/splunk/metrics.log" group=per_host_thruput  | timechart minspan=10m avg(eps) by series</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Heavy logging sources</title>
+        <search>
+          <query>host="lm1.tescobank.splunkcloud.com" index=_internal source=*license_usage.log sourcetype=splunkd type=Usage | stats sum(b) as totalBytes by s, h, idx, st | eval totalMBs=round(((totalBytes / 1024) / 1024)) | where (totalMBs &gt; 100) | table s, h, idx, st, totalMBs | sort - totalMBs</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">10</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+        <format type="color" field="totalMBs">
+          <colorPalette type="minMidMax" maxColor="#D6563C" midColor="#FFFFFF" minColor="#FFFFFF"></colorPalette>
+          <scale type="minMidMax" maxValue="900" midValue="600" minValue="250"></scale>
+        </format>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>AWS Cloudwatch Errors by Namespace</title>
+        <search>
+          <query>index=_internal host=sh* source="/opt/splunk/var/log/splunk/splunk_ta_aws_cloudwatch*" ERROR
+|timechart count by namespace</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.drilldown">none</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>AWS Cloudwatch Errors by Environment</title>
+        <search>
+          <query>index=_internal host=sh* source="/opt/splunk/var/log/splunk/splunk_ta_aws_cloudwatch*.log" ERROR
+| rex field=datainput "(?&lt;env&gt;\w+):"
+|timechart count by env</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">column</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">stacked</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.layout.splitSeries">0</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+        <option name="trellis.scales.shared">1</option>
+        <option name="trellis.size">medium</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>AWS CloudWatch Error Types</title>
+        <search>
+          <query>index=_internal host=sh* source="/opt/splunk/var/log/splunk/splunk_ta_aws_cloudwatch*.log" ERROR 
+| cluster field=ErrorDetail showcount=true countfield=ErrorCount
+| table ErrorCount message ErrorDetail
+| sort - ErrorCount</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">5</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <html>
+       <u1> </u1>
+     </html>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <title>AWS 2.5</title>
+      <chart>
+        <title>TcpOut Kbps per HF forwarder- PROD</title>
+        <search>
+          <query>index=_internal host=splunkfwd0*.vpc02.prd.tbaws.com group=tcpout_connections | timechart minspan=30s per_second(kb) as tcp_KBps by host</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">1</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">404</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>AWS 2.5</title>
+      <chart>
+        <title>TcpOut Kbps per HF forwarder - PPE</title>
+        <search>
+          <query>index=_internal host=splunkfwd0*.vpc02.ppe.tbaws.com group=tcpout_connections | timechart minspan=30s per_second(kb) as tcp_KBps by host</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">1</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">404</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <title>AWS 3.0</title>
+      <chart>
+        <title>TcpOut Kbps per HF forwarder - PROD</title>
+        <search>
+          <query>index=_internal (host="splunkfwd-euw1a.ss.aws.tbcloud.org" OR host="splunkfwd.euw1b.ss.aws.tbcloud.org" OR host="splunkfwd-euw1c.ss.aws.tbcloud.org") group=tcpout_connections | timechart minspan=30s per_second(kb) as tcp_KBps by host</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisLabelsX.majorLabelStyle.overflowMode">ellipsisNone</option>
+        <option name="charting.axisLabelsX.majorLabelStyle.rotation">0</option>
+        <option name="charting.axisTitleX.visibility">visible</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.axisX.scale">linear</option>
+        <option name="charting.axisY.scale">linear</option>
+        <option name="charting.axisY2.enabled">0</option>
+        <option name="charting.axisY2.scale">inherit</option>
+        <option name="charting.chart">area</option>
+        <option name="charting.chart.bubbleMaximumSize">50</option>
+        <option name="charting.chart.bubbleMinimumSize">10</option>
+        <option name="charting.chart.bubbleSizeBy">area</option>
+        <option name="charting.chart.nullValueMode">gaps</option>
+        <option name="charting.chart.showDataLabels">none</option>
+        <option name="charting.chart.sliceCollapsingThreshold">0.01</option>
+        <option name="charting.chart.stackMode">default</option>
+        <option name="charting.chart.style">shiny</option>
+        <option name="charting.drilldown">all</option>
+        <option name="charting.layout.splitSeries">1</option>
+        <option name="charting.layout.splitSeries.allowIndependentYRanges">0</option>
+        <option name="charting.legend.labelStyle.overflowMode">ellipsisMiddle</option>
+        <option name="charting.legend.placement">right</option>
+        <option name="height">404</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <chart>
+        <title>splunkfwd01 PROD - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host=splunkfwd01.vpc02.prd.tbaws.com (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">visible</option>
+        <option name="charting.axisTitleY2.visibility">visible</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="trellis.enabled">0</option>
+      </chart>
+      <chart>
+        <title>splunkfwd02 PROD - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host=splunkfwd02.vpc02.prd.tbaws.com (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.axisTitleY.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+      <chart>
+        <title>splunkfwd03 PROD - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host=splunkfwd03.vpc02.prd.tbaws.com (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>splunkfwd01 PPE - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host=splunkfwd01.vpc02.ppe.tbaws.com (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+      <chart>
+        <title>splunkfwd02 PPE - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host=splunkfwd02.vpc02.ppe.tbaws.com (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+      <chart>
+        <title>splunkfwd03 PPE - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host=splunkfwd03.vpc02.ppe.tbaws.com (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+    <panel>
+      <chart>
+        <title>splunkfwd-euw1a PROD - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host="splunkfwd-euw1a.ss.aws.tbcloud.org" (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+      <chart>
+        <title>splunkfwd-euw1b PROD - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host="splunkfwd.euw1b.ss.aws.tbcloud.org" (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+      <chart>
+        <title>splunkfwd-euw1c PROD - queues</title>
+        <search>
+          <query>index=_internal source=*metrics.log group=queue host="splunkfwd-euw1c.ss.aws.tbcloud.org" (name=parsingqueue OR name=indexqueue OR name=typingqueue OR name=aggqueue) | timechart avg(current_size) by name</query>
+          <earliest>-24h@h</earliest>
+          <latest>now</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="charting.axisTitleX.visibility">collapsed</option>
+        <option name="charting.chart">line</option>
+        <option name="charting.drilldown">none</option>
+        <option name="charting.legend.placement">bottom</option>
+        <option name="refresh.display">progressbar</option>
+      </chart>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Forwarders Down</title>
+        <search>
+          <query>| metadata type=hosts index=_internal 
+| search `comment("Find forwarders that have recently stopped talking to the indexers / appear to be down")`
+NOT (`splunkenterprisehosts`) `splunkadmins_forwarderdown`
+| eval age=now()-recentTime | eval status=if(age&lt;1200,"UP","DOWN") 
+| eval "Last Active On"=strftime(recentTime, "%+") 
+| rename age as Age 
+| eval Hour=round(Age/3600,0)
+| eval Minute=round((Age%3600)/60,0)
+| eval Age="-".Hour."h"." : ".Minute."m" 
+| table host, status, "Last Active On", Age 
+| search status=DOWN</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">8</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">cell</option>
+        <option name="percentagesRow">false</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <input type="text" token="num_rows" searchWhenChanged="true">
+        <label>Rows per page</label>
+        <default>5</default>
+        <initialValue>5</initialValue>
+      </input>
+      <input type="text" token="host_name" searchWhenChanged="true">
+        <label>Host</label>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="text" token="idx_name" searchWhenChanged="true">
+        <label>Index</label>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="text" token="st_name" searchWhenChanged="true">
+        <label>Sourcetype</label>
+        <default>*</default>
+        <initialValue>*</initialValue>
+      </input>
+      <input type="text" token="averag" searchWhenChanged="true">
+        <label>Average greater than</label>
+        <default>2</default>
+        <initialValue>2</initialValue>
+      </input>
+      <table>
+        <title>Host-Index-sourcetypes Communications</title>
+        <search>
+          <query>| tstats latest(_time) as Latest where (index="$idx_name$" AND sourcetype="$st_name$" AND host="$host_name$") by host sourcetype index 
+| eval current=now() 
+| eval Minimum_Age=round(((current-Latest)/60)/60,2) 
+| rangemap field=Minimum_Age default=Critical Normal=0-0.5 Elevated=0.5-2 Warning=2-4
+| eval stIDX=tostring(index) + " -- " + tostring(sourcetype)
+| stats values(stIDX) as "Index -- Sourcetype" list(Latest) as "Latest Event" list(Minimum_Age) as Minimum_Age list(range) as Threshold by host 
+| convert ctime("Latest Event") 
+| eventstats avg(Minimum_Age) as average by host 
+| search average&gt;$averag$
+| eval average=round(average,2) 
+| sort - average
+| rename Minimum_Age as "Hours Since Last Communication" average as "Average Time in Hours Since Last Communication"</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <sampleRatio>1</sampleRatio>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">$num_rows$</option>
+        <option name="dataOverlayMode">none</option>
+        <option name="drilldown">none</option>
+        <option name="percentagesRow">false</option>
+        <option name="refresh.display">progressbar</option>
+        <option name="rowNumbers">false</option>
+        <option name="totalsRow">false</option>
+        <option name="wrap">true</option>
+      </table>
+    </panel>
+  </row>
+  <row>
+    <panel>
+      <table>
+        <title>Errors from Splunkd.log with IP by Environment</title>
+        <search>
+          <query>index=_internal sourcetype="splunkd" log_level="ERROR"
+ | stats sparkline count dc(host) as hosts last(_raw) as last_raw_msg values(sourcetype) as sourcetype last(_time) as last_msg_time first(_time) as first_msg_time values(index) as index by punct
+ | eval delta=round((first_msg_time-last_msg_time),2)
+ | eval msg_per_sec=round((count/delta),2)
+ | convert ctime(last_msg_time) ctime(first_msg_time)
+ | table last_raw_msg count hosts sparkline msg_per_sec sourcetype index first_msg_time last_msg_time delta
+ | sort -count</query>
+          <earliest>$field1.earliest$</earliest>
+          <latest>$field1.latest$</latest>
+          <refresh>10m</refresh>
+          <refreshType>delay</refreshType>
+        </search>
+        <option name="count">8</option>
+        <option name="drilldown">cell</option>
+      </table>
+    </panel>
+  </row>
+</form>
