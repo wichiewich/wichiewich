@@ -1,0 +1,32 @@
+
+index=prd_edge sourcetype="tb:hec:edge" operationName=validateTescoStoresAccessToken OR  operationName=getTescoStoresCustomerProfile OR  operationName=getTescoStoresCustomerBankCapabilities OR  operationName=getPostCodeSearch OR  operationName=clubcardPayApplicationSoapOperation OR operationName=clubcardPayBankingCustomerSoapOperation OR  operationName=createPepsSanctionsCheck OR  operationName=reatePepsSanctionsBankingHostNotification
+| fields operationName _time clientApplication correlationId destEndPoint srcEndPoint direction eventType direction source host channel httpStatusCode 
+| rex field=operationName "(?<opName>\S+)" 
+| eval opName=source.":".opName
+| eval 2XX_count=if(match(httpStatusCode, "^2[0-9][0-9]$"), 1, 0) 
+| eval 4XX_count=if(match(httpStatusCode, "^4[0-9][0-9]$"), 1, 0) 
+| eval 5XX_count=if(match(httpStatusCode, "^5[0-9][0-9]$"), 1, 0) 
+| eval 2XX_count_pct=round('2XX_count' * 100,2)
+| eval 4XX_count_pct=round('4XX_count' * 100,2) 
+| eval 5XX_count_pct=round('5XX_count' * 100,2) 
+| eval errorCount=if(match(eventType, "error"), 1, 0) 
+| stats earliest(_time) as _time count as totalVolume dc(correlationId) as Unqiue_Customers count(2XX_count) as Success avg(2XX_count_pct) as Success_PCT count(4XX_count) as ClientErrors avg(4XX_count_pct) as Cient_Errors_PCT count(5XX_count) as Server_Errors avg(5XX_count_pct) as Server_Errors_PCT by opName
+| table opName Unqiue_Customers Success Success_PCT ClientErrors Cient_Errors_PCT Server_Errors Server_Errors_PCT
+
+index=prd_edge sourcetype="tb:hec:edge" operationName=validateTescoStoresAccessToken OR operationName=getTescoStoresCustomerProfile OR operationName=getTescoStoresCustomerBankCapabilities OR operationName=getPostCodeSearch OR operationName=clubcardPayApplicationSoapOperation OR operationName=clubcardPayBankingCustomerSoapOperation OR operationName=createPepsSanctionsCheck OR operationName=reatePepsSanctionsBankingHostNotification eventType=error 
+| rex field=operationName "(?<opName>\S+)" 
+| eval opName=source.":".opName 
+| eval status=case('eventType'="log","success",'eventType'="error","error",true(),"unknown")
+| eval CustomersWithServerErrors=if(match(httpStatusCode,"5\d\d"),tbId,null())
+| eval CustomerWithClientErrors=if(match(httpStatusCode,"4\d\d"),tbId,null())
+| eval CustWithErrors=CustomersWithServerErrors+CustomerWithClientErrors
+| eval customerImpact_pct = round((CustomersWithServerErrors/uniqueCustomers)*100,2) 
+| eval {opName}_errorCount=errorCount
+| eval {opName}_vol = 1
+| eventstats count by opName
+| stats dc(tbId) as uniqueCustomers values(count) as Total_Opname_Errors  count(eval(match(httpStatusCode,"5\d\d"))) as serverErrors dc(customerWithServerError) as custWithServerErrs 
+	count(eval(match(httpStatusCode,"4\d\d"))) as clientErrors  dc(customerWithClientError) as CustWithErrors 
+	count(eval(match(httpStatusCode,"2\d\d"))) as "Success Count" median(responseTime) by opName
+	| fillnull value=0 customerImpact_pct
+	| table opName Total_Opname_Errors uniqueCustomers serverErrors clientErrors customerImpact_pct
+| addcoltotals col=true labelfield="opName" label="Error Totals per Operation Name"
